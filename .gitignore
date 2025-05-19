@@ -1,0 +1,41 @@
+# Node / React / Next
+node_modules/
+npm-debug.log*
+yarn.lock
+.pnpm-store/
+dist/
+build/
+.next/
+out/
+.cache/
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg
+*.egg-info/
+.eggs/
+.coverage
+htmlcov/
+*.sqlite3
+
+# Testing/output
+coverage/
+test-results/
+playwright-report/
+cypress/videos/
+cypress/screenshots/
+
+# Environment / secrets
+.env*
+*.pem
+*.key
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
