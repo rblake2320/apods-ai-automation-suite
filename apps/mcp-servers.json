@@ -1,0 +1,30 @@
+{
+  "servers": [
+    {
+      "name": "filesystem",
+      "type": "fs",
+      "enabled": true,
+      "config": {
+        "allowedDirectories": [
+          "./apps/frontend",
+          "./apps/backend",
+          "./scripts"
+        ]
+      }
+    },
+    {
+      "name": "playwright",
+      "type": "playwright",
+      "enabled": true,
+      "config": {
+        "headless": false
+      }
+    },
+    {
+      "name": "memory",
+      "type": "memory",
+      "enabled": true,
+      "config": {}
+    }
+  ]
+}
