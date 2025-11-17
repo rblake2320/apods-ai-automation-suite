@@ -54,6 +54,11 @@ screenshots/
 .env
 .env.local
 
+# Node.js
+node_modules/
+.pnpm-store/
+.turbo/
+
 # OS
 .DS_Store
 Thumbs.db
