@@ -1,19 +1,161 @@
-name: Playwright Tests
+name: Playwright E2E Tests
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
+    branches: [main, develop]
+  schedule:
+    - cron: '0 0 * * *' # Run daily at midnight
+  workflow_dispatch:
 
 permissions:
   contents: read
+  checks: write
+
+env:
+  NODE_VERSION: '20.x'
+  PNPM_VERSION: '8.15.0'
 
 jobs:
+  # E2E Tests
   e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+        shard: [1, 2]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Run Playwright tests
+        run: pnpm test:e2e --project=${{ matrix.browser }} --shard=${{ matrix.shard }}/2
+        env:
+          CI: true
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: playwright-report-${{ matrix.browser }}-${{ matrix.shard }}
+          path: playwright-report/
+          retention-days: 7
+
+      - name: Upload test screenshots
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: playwright-screenshots-${{ matrix.browser }}-${{ matrix.shard }}
+          path: test-results/
+          retention-days: 7
+
+  # Visual regression testing
+  visual-regression:
+    name: Visual Regression Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: microsoft/playwright-github-action@v1
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps
-      - run: pnpm test:e2e
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run visual regression tests
+        run: pnpm test:e2e --grep @visual
+
+      - name: Upload visual comparison results
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: visual-regression-diff
+          path: test-results/
+          retention-days: 7
+
+  # Accessibility tests
+  accessibility:
+    name: Accessibility Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run accessibility tests
+        run: pnpm test:e2e --grep @a11y
+
+      - name: Upload accessibility report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: accessibility-report
+          path: playwright-report/
+          retention-days: 7
+
+  # Publish test report
+  publish-report:
+    name: Publish Test Report
+    needs: [e2e, visual-regression, accessibility]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+
+      - name: Publish test results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Playwright Tests
+          path: '**/results.json'
+          reporter: mocha-json

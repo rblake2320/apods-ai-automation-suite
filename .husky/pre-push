@@ -1,0 +1,116 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# APODS AI-Automation Suite - Pre-push Hook
+# This hook runs comprehensive validation before pushing to remote
+
+echo "🚀 Running pre-push validation..."
+
+# Get the current branch name
+current_branch=$(git symbolic-ref --short HEAD)
+
+echo "📍 Current branch: $current_branch"
+
+# Prevent pushing to main/master without proper validation
+if [ "$current_branch" = "main" ] || [ "$current_branch" = "master" ]; then
+  echo "⚠️  WARNING: You are about to push to $current_branch branch!"
+  read -p "Are you sure you want to continue? (y/N) " -n 1 -r
+  echo
+  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "❌ Push cancelled"
+    exit 1
+  fi
+fi
+
+# Run linting on all files
+echo "🔍 Running linters..."
+pnpm lint
+
+if [ $? -ne 0 ]; then
+  echo "❌ Linting failed. Please fix the errors before pushing."
+  exit 1
+fi
+
+# Run type checking on all packages
+echo "🔎 Type checking all packages..."
+pnpm typecheck
+
+if [ $? -ne 0 ]; then
+  echo "❌ Type checking failed. Please fix the type errors before pushing."
+  exit 1
+fi
+
+# Run all tests
+echo "🧪 Running all tests..."
+pnpm test
+
+if [ $? -ne 0 ]; then
+  echo "❌ Tests failed. Please fix the failing tests before pushing."
+  echo "If you want to skip this check, use --no-verify flag."
+  exit 1
+fi
+
+# Check for build errors
+echo "🏗️  Building all packages..."
+pnpm build
+
+if [ $? -ne 0 ]; then
+  echo "❌ Build failed. Please fix the build errors before pushing."
+  exit 1
+fi
+
+# Run security audit
+echo "🔒 Running security audit..."
+pnpm audit --audit-level=moderate
+
+if [ $? -ne 0 ]; then
+  echo "⚠️  WARNING: Security vulnerabilities detected!"
+  echo "Consider fixing them before pushing."
+  read -p "Do you want to continue anyway? (y/N) " -n 1 -r
+  echo
+  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    exit 1
+  fi
+fi
+
+# Check if package-lock.json or pnpm-lock.yaml is out of sync
+echo "📦 Checking lock files..."
+if git diff --name-only | grep -q "package.json"; then
+  if ! git diff --name-only | grep -q "pnpm-lock.yaml"; then
+    echo "⚠️  WARNING: package.json changed but pnpm-lock.yaml didn't!"
+    echo "Did you forget to run 'pnpm install'?"
+    read -p "Do you want to continue anyway? (y/N) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+      exit 1
+    fi
+  fi
+fi
+
+# Check for large files
+echo "📏 Checking for large files..."
+large_files=$(git diff --cached --name-only | xargs -I {} sh -c 'if [ -f "{}" ] && [ $(stat -f%z "{}" 2>/dev/null || stat -c%s "{}" 2>/dev/null || echo 0) -gt 5242880 ]; then echo "{}"; fi')
+
+if [ ! -z "$large_files" ]; then
+  echo "⚠️  WARNING: Large files detected (>5MB):"
+  echo "$large_files"
+  echo "Consider using Git LFS for large files."
+  read -p "Do you want to continue anyway? (y/N) " -n 1 -r
+  echo
+  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    exit 1
+  fi
+fi
+
+# Check for untracked files
+untracked_count=$(git status --porcelain | grep "^??" | wc -l)
+if [ "$untracked_count" -gt 0 ]; then
+  echo "ℹ️  You have $untracked_count untracked file(s)"
+  echo "Make sure you didn't forget to add important files."
+fi
+
+# Success!
+echo ""
+echo "✅ All pre-push checks passed!"
+echo "🚀 Proceeding with push..."
+echo ""

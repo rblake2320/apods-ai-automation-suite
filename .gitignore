@@ -1,41 +1,64 @@
-# Node / React / Next
-node_modules/
-npm-debug.log*
-yarn.lock
-.pnpm-store/
-dist/
-build/
-.next/
-out/
-.cache/
-
 # Python
-venv/
-.venv/
 __pycache__/
 *.py[cod]
-*.pyo
-*.egg
-*.egg-info/
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
 .eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Testing
+.pytest_cache/
 .coverage
 htmlcov/
-*.sqlite3
+.tox/
 
-# Testing/output
-coverage/
-test-results/
-playwright-report/
-cypress/videos/
-cypress/screenshots/
+# Logs
+logs/
+*.log
 
-# Environment / secrets
-.env*
-*.pem
-*.key
+# Data
+data/
+output/
+screenshots/
+*.db
+*.sqlite
 
-# Editors / OS
-.idea/
-.vscode/
+# Environment
+.env
+.env.local
+
+# OS
 .DS_Store
 Thumbs.db
+
+# Temp
+tmp/
+temp/
+/tmp/apods/

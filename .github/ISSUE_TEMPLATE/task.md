@@ -5,10 +5,13 @@ labels: task
 ---
 
 ### Task
+
 Brief description.
 
 ### Acceptance criteria
+
 - [ ] …
 
 ### Notes
+
 Optional details.

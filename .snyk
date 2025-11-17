@@ -1,0 +1,49 @@
+# Snyk configuration file for APODS AI-Automation Suite
+# Documentation: https://docs.snyk.io/snyk-cli/configure-the-snyk-cli
+
+# Language settings
+language-settings:
+  node:
+    # Exclude dev dependencies from production scans
+    dev-dependencies: false
+    # Package manager
+    package-manager: pnpm
+
+# Exclude specific paths from scanning
+exclude:
+  global:
+    - node_modules/**
+    - dist/**
+    - build/**
+    - .turbo/**
+    - coverage/**
+    - .next/**
+    - .vite/**
+    - test/**
+    - tests/**
+    - '**/*.test.ts'
+    - '**/*.spec.ts'
+    - '**/*.test.js'
+    - '**/*.spec.js'
+
+# Organization and project settings
+organization: apods-ai-automation-suite
+
+# Severity threshold
+# Options: low, medium, high, critical
+fail-on: high
+
+# Ignore specific vulnerabilities
+# Add vulnerability IDs here to suppress specific issues
+ignore:
+  # Example:
+  # SNYK-JS-AXIOS-1234567:
+  #   - '**':
+  #       reason: 'Not exploitable in our use case'
+  #       expires: '2024-12-31'
+
+# Patch settings
+patch: {}
+
+# Version
+version: v1.1000.0

@@ -1,0 +1,69 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# APODS AI-Automation Suite - Commit Message Hook
+# This hook validates commit message format according to conventional commits
+
+echo "📝 Validating commit message..."
+
+commit_msg_file=$1
+commit_msg=$(cat "$commit_msg_file")
+
+# Conventional Commits pattern
+# Format: type(scope?): subject
+# Types: feat, fix, docs, style, refactor, test, chore, perf, ci, build, revert
+pattern="^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\(.+\))?: .{1,100}"
+
+if ! echo "$commit_msg" | grep -qE "$pattern"; then
+  echo "❌ Invalid commit message format!"
+  echo ""
+  echo "Commit message must follow the Conventional Commits specification:"
+  echo ""
+  echo "Format: <type>(<scope>): <subject>"
+  echo ""
+  echo "Types:"
+  echo "  feat:     A new feature"
+  echo "  fix:      A bug fix"
+  echo "  docs:     Documentation only changes"
+  echo "  style:    Changes that don't affect code meaning (formatting, etc.)"
+  echo "  refactor: Code change that neither fixes a bug nor adds a feature"
+  echo "  test:     Adding missing tests or correcting existing tests"
+  echo "  chore:    Changes to build process or auxiliary tools"
+  echo "  perf:     Performance improvements"
+  echo "  ci:       Changes to CI configuration files and scripts"
+  echo "  build:    Changes that affect the build system or dependencies"
+  echo "  revert:   Reverts a previous commit"
+  echo ""
+  echo "Examples:"
+  echo "  feat(auth): add login functionality"
+  echo "  fix(api): resolve CORS issue"
+  echo "  docs: update README with installation instructions"
+  echo "  test(backend): add unit tests for user service"
+  echo ""
+  echo "Your commit message:"
+  echo "  $commit_msg"
+  echo ""
+  exit 1
+fi
+
+# Check if commit message is too short
+subject_length=$(echo "$commit_msg" | head -n 1 | wc -c)
+if [ "$subject_length" -lt 10 ]; then
+  echo "❌ Commit message is too short (minimum 10 characters)"
+  exit 1
+fi
+
+# Check if subject line is too long
+if [ "$subject_length" -gt 100 ]; then
+  echo "⚠️  WARNING: Commit message subject is longer than 100 characters"
+  echo "Consider making it more concise."
+fi
+
+# Check for imperative mood (simple heuristic)
+if echo "$commit_msg" | grep -qE "^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\(.+\))?: (Added|Fixed|Changed|Updated|Removed)"; then
+  echo "⚠️  WARNING: Use imperative mood in subject line"
+  echo "Use 'add' instead of 'added', 'fix' instead of 'fixed', etc."
+fi
+
+echo "✅ Commit message is valid!"
+echo ""

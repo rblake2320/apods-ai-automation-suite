@@ -1,0 +1,154 @@
+# Docker Compose configuration for development environment
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+version: '3.9'
+
+services:
+  # PostgreSQL with pgAdmin for development
+  postgres:
+    environment:
+      POSTGRES_DB: apods_dev
+      POSTGRES_USER: apods_dev
+      POSTGRES_PASSWORD: dev_password
+    ports:
+      - '5432:5432'
+
+  # PgAdmin for database management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: apods-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@apods.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+      - ./docker/pgadmin/servers.json:/pgadmin4/servers.json:ro
+    ports:
+      - '5050:80'
+    depends_on:
+      - postgres
+    networks:
+      - apods-network
+    logging:
+      driver: json-file
+      options:
+        max-size: '5m'
+        max-file: '2'
+
+  # Redis with Redis Commander for development
+  redis:
+    ports:
+      - '6379:6379'
+    command: redis-server --requirepass dev_password --maxmemory 128mb
+
+  # Redis Commander for Redis management
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: apods-redis-commander
+    restart: unless-stopped
+    environment:
+      REDIS_HOSTS: local:redis:6379:0:dev_password
+      HTTP_USER: ${REDIS_COMMANDER_USER:-admin}
+      HTTP_PASSWORD: ${REDIS_COMMANDER_PASSWORD:-admin}
+    ports:
+      - '8081:8081'
+    depends_on:
+      - redis
+    networks:
+      - apods-network
+    logging:
+      driver: json-file
+      options:
+        max-size: '5m'
+        max-file: '2'
+
+  # Backend with hot reload
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+      target: base
+    command: pnpm --filter backend dev
+    environment:
+      NODE_ENV: development
+      LOG_LEVEL: debug
+      DATABASE_URL: postgresql://apods_dev:dev_password@postgres:5432/apods_dev
+      REDIS_URL: redis://:dev_password@redis:6379
+      CORS_ORIGIN: http://localhost:5173
+      RATE_LIMIT_WINDOW: 60
+      RATE_LIMIT_MAX: 1000
+    volumes:
+      - ./apps/backend:/app/apps/backend
+      - ./package.json:/app/package.json
+      - ./pnpm-lock.yaml:/app/pnpm-lock.yaml
+      - ./pnpm-workspace.yaml:/app/pnpm-workspace.yaml
+      - ./tsconfig.json:/app/tsconfig.json
+      - backend-dev-node-modules:/app/apps/backend/node_modules
+      - /app/node_modules
+    ports:
+      - '3000:3000'
+      - '9229:9229' # Node.js debugging port
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 4G
+
+  # Frontend with hot reload
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+      target: base
+    command: pnpm --filter frontend dev --host
+    environment:
+      NODE_ENV: development
+      VITE_API_URL: http://localhost:3000
+      VITE_WS_URL: ws://localhost:3000
+    volumes:
+      - ./apps/frontend:/app/apps/frontend
+      - ./package.json:/app/package.json
+      - ./pnpm-lock.yaml:/app/pnpm-lock.yaml
+      - ./pnpm-workspace.yaml:/app/pnpm-workspace.yaml
+      - ./tsconfig.json:/app/tsconfig.json
+      - frontend-dev-node-modules:/app/apps/frontend/node_modules
+      - /app/node_modules
+    ports:
+      - '5173:5173'
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+
+  # Mailhog for email testing
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: apods-mailhog
+    restart: unless-stopped
+    ports:
+      - '1025:1025' # SMTP port
+      - '8025:8025' # Web UI
+    networks:
+      - apods-network
+    logging:
+      driver: json-file
+      options:
+        max-size: '5m'
+        max-file: '2'
+
+  # Nginx is not needed in dev, comment out
+  nginx:
+    profiles:
+      - production
+
+volumes:
+  pgadmin-data:
+    driver: local
+  backend-dev-node-modules:
+    driver: local
+  frontend-dev-node-modules:
+    driver: local

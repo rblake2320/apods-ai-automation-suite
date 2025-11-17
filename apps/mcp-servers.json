@@ -1,30 +1,173 @@
 {
+  "version": "1.0.0",
+  "description": "MCP Server Configuration for APODS AI-Automation Suite",
   "servers": [
     {
       "name": "filesystem",
       "type": "fs",
       "enabled": true,
+      "description": "Filesystem operations including read, write, search, and watch",
+      "package": "@apods/mcp-filesystem",
+      "entrypoint": "./apps/mcp-servers/filesystem/dist/index.js",
+      "transport": "stdio",
       "config": {
-        "allowedDirectories": [
-          "./apps/frontend",
-          "./apps/backend",
-          "./scripts"
-        ]
+        "allowedDirectories": ["./apps/frontend", "./apps/backend", "./scripts"],
+        "maxFileSize": 104857600,
+        "enableWatch": true,
+        "rateLimit": {
+          "enabled": false,
+          "maxRequests": 100,
+          "windowMs": 60000
+        }
+      },
+      "capabilities": [
+        "fs.read",
+        "fs.write",
+        "fs.delete",
+        "fs.list",
+        "fs.createDirectory",
+        "fs.search",
+        "fs.findFiles",
+        "fs.watch.start",
+        "fs.watch.stop",
+        "fs.watch.list"
+      ],
+      "env": {
+        "ALLOWED_DIRECTORIES": "./apps/frontend,./apps/backend,./scripts",
+        "MAX_FILE_SIZE": "104857600",
+        "ENABLE_WATCH": "true",
+        "LOG_LEVEL": "info",
+        "LOG_TO_FILE": "false"
       }
     },
     {
       "name": "playwright",
       "type": "playwright",
       "enabled": true,
+      "description": "Browser automation with Playwright for web scraping and testing",
+      "package": "@apods/mcp-playwright",
+      "entrypoint": "./apps/mcp-servers/playwright/dist/index.js",
+      "transport": "stdio",
       "config": {
-        "headless": false
+        "headless": false,
+        "viewport": {
+          "width": 1280,
+          "height": 720
+        },
+        "recordVideo": false,
+        "slowMo": 0,
+        "rateLimit": {
+          "enabled": false,
+          "maxRequests": 50,
+          "windowMs": 60000
+        }
+      },
+      "capabilities": [
+        "browser.navigate",
+        "browser.goBack",
+        "browser.goForward",
+        "browser.reload",
+        "browser.getUrl",
+        "browser.click",
+        "browser.fill",
+        "browser.type",
+        "browser.press",
+        "browser.check",
+        "browser.uncheck",
+        "browser.select",
+        "browser.screenshot",
+        "browser.elementScreenshot",
+        "browser.pdf",
+        "browser.viewport",
+        "browser.extract",
+        "browser.evaluate",
+        "browser.waitForSelector",
+        "browser.waitForTimeout",
+        "browser.getAttribute",
+        "browser.isVisible",
+        "browser.runAutomation",
+        "browser.getCookies",
+        "browser.setCookies"
+      ],
+      "env": {
+        "HEADLESS": "false",
+        "VIEWPORT_WIDTH": "1280",
+        "VIEWPORT_HEIGHT": "720",
+        "RECORD_VIDEO": "false",
+        "LOG_LEVEL": "info",
+        "LOG_TO_FILE": "false"
       }
     },
     {
       "name": "memory",
       "type": "memory",
       "enabled": true,
-      "config": {}
+      "description": "In-memory key-value storage with persistence and TTL support",
+      "package": "@apods/mcp-memory",
+      "entrypoint": "./apps/mcp-servers/memory/dist/index.js",
+      "transport": "stdio",
+      "config": {
+        "persistPath": "./data/memory.json",
+        "autoSaveMs": 60000,
+        "cleanupIntervalMs": 300000,
+        "rateLimit": {
+          "enabled": false,
+          "maxRequests": 200,
+          "windowMs": 60000
+        }
+      },
+      "capabilities": [
+        "memory.store",
+        "memory.update",
+        "memory.batchStore",
+        "memory.exists",
+        "memory.retrieve",
+        "memory.retrieveMultiple",
+        "memory.list",
+        "memory.size",
+        "memory.keys",
+        "memory.search",
+        "memory.searchByTag",
+        "memory.searchByType",
+        "memory.getStats",
+        "memory.delete",
+        "memory.deleteMultiple",
+        "memory.deleteByPattern",
+        "memory.deleteByTag",
+        "memory.clear",
+        "memory.deleteExpired",
+        "memory.persist",
+        "memory.backup",
+        "memory.restore"
+      ],
+      "env": {
+        "PERSIST_PATH": "./data/memory.json",
+        "AUTO_SAVE_MS": "60000",
+        "CLEANUP_INTERVAL_MS": "300000",
+        "LOG_LEVEL": "info",
+        "LOG_TO_FILE": "false"
+      }
     }
-  ]
+  ],
+  "shared": {
+    "logging": {
+      "level": "info",
+      "toFile": false,
+      "directory": "./logs"
+    },
+    "healthCheck": {
+      "enabled": true,
+      "intervalMs": 30000
+    },
+    "metrics": {
+      "enabled": true,
+      "collectIntervalMs": 60000
+    }
+  },
+  "metadata": {
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z",
+    "author": "rblake2320",
+    "repository": "https://github.com/rblake2320/apods-ai-automation-suite"
+  }
 }

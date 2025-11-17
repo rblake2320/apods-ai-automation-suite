@@ -1,0 +1,14 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "APODS Development",
+      "Group": "Servers",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "apods_dev",
+      "Username": "apods_dev",
+      "SSLMode": "prefer",
+      "Comment": "APODS AI-Automation Suite Development Database"
+    }
+  }
+}

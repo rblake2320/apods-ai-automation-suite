@@ -1,0 +1,39 @@
+{
+  "name": "@apods/mcp-playwright",
+  "version": "1.0.0",
+  "description": "Playwright MCP Server for APODS AI-Automation Suite",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "start:dev": "tsx src/index.ts",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "postinstall": "playwright install chromium"
+  },
+  "keywords": [
+    "mcp",
+    "playwright",
+    "browser-automation",
+    "model-context-protocol",
+    "web-scraping"
+  ],
+  "author": "rblake2320",
+  "license": "MIT",
+  "dependencies": {
+    "@types/node": "^20.11.16",
+    "playwright": "^1.41.2"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

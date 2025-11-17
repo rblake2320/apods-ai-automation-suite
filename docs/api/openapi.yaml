@@ -1,0 +1,561 @@
+openapi: 3.0.3
+info:
+  title: APODS AI-Automation Suite API
+  description: |
+    Comprehensive automation toolkit with AI integration providing endpoints for
+    managing automations, executing AI-powered tasks, and monitoring system health.
+  version: 1.0.0
+  contact:
+    name: APODS Support
+    email: support@apods.example.com
+    url: https://apods.example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api.apods.example.com
+    description: Production server
+  - url: https://staging-api.apods.example.com
+    description: Staging server
+  - url: http://localhost:3000
+    description: Local development server
+
+tags:
+  - name: Health
+    description: Health check endpoints
+  - name: Authentication
+    description: User authentication and authorization
+  - name: Automations
+    description: Automation management
+  - name: Executions
+    description: Automation execution tracking
+  - name: AI
+    description: AI-powered operations
+
+paths:
+  /health:
+    get:
+      summary: Basic health check
+      description: Returns basic health status of the service
+      tags: [Health]
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /health/detailed:
+    get:
+      summary: Detailed health check
+      description: Returns detailed health status including all dependencies
+      tags: [Health]
+      responses:
+        '200':
+          description: Detailed health information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailedHealth'
+
+  /metrics:
+    get:
+      summary: Prometheus metrics
+      description: Returns Prometheus metrics in text format
+      tags: [Health]
+      responses:
+        '200':
+          description: Metrics data
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /api/auth/register:
+    post:
+      summary: Register new user
+      description: Creates a new user account
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: User already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/login:
+    post:
+      summary: User login
+      description: Authenticates a user and returns JWT tokens
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/auth/refresh:
+    post:
+      summary: Refresh access token
+      description: Generates a new access token using refresh token
+      tags: [Authentication]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/automations:
+    get:
+      summary: List automations
+      description: Returns a list of automations for the authenticated user
+      tags: [Automations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: isActive
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: List of automations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Automation'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: Create automation
+      description: Creates a new automation
+      tags: [Automations]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAutomationRequest'
+      responses:
+        '201':
+          description: Automation created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Automation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/automations/{id}:
+    get:
+      summary: Get automation
+      description: Returns a specific automation by ID
+      tags: [Automations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AutomationId'
+      responses:
+        '200':
+          description: Automation details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Automation'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      summary: Update automation
+      description: Updates an existing automation
+      tags: [Automations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AutomationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAutomationRequest'
+      responses:
+        '200':
+          description: Automation updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Automation'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: Delete automation
+      description: Deletes an automation
+      tags: [Automations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AutomationId'
+      responses:
+        '204':
+          description: Automation deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/automations/{id}/execute:
+    post:
+      summary: Execute automation
+      description: Triggers an automation execution
+      tags: [Automations]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AutomationId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                parameters:
+                  type: object
+                  additionalProperties: true
+      responses:
+        '202':
+          description: Execution started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecutionLog'
+
+  /api/executions/{id}:
+    get:
+      summary: Get execution details
+      description: Returns details of a specific execution
+      tags: [Executions]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Execution details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecutionLog'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    AutomationId:
+      name: id
+      in: path
+      required: true
+      description: Automation ID
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    Error:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+        code:
+          type: string
+        details:
+          type: object
+
+    DetailedHealth:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        timestamp:
+          type: string
+          format: date-time
+        uptime:
+          type: number
+        version:
+          type: string
+        checks:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              status:
+                type: string
+                enum: [healthy, degraded, unhealthy]
+              message:
+                type: string
+              responseTime:
+                type: number
+
+    RegisterRequest:
+      type: object
+      required: [email, username, password]
+      properties:
+        email:
+          type: string
+          format: email
+        username:
+          type: string
+          minLength: 3
+        password:
+          type: string
+          format: password
+          minLength: 8
+        firstName:
+          type: string
+        lastName:
+          type: string
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        expiresIn:
+          type: integer
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        username:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        isActive:
+          type: boolean
+        isVerified:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Automation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        config:
+          type: object
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        lastRun:
+          type: string
+          format: date-time
+
+    CreateAutomationRequest:
+      type: object
+      required: [name, config]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        config:
+          type: object
+        isActive:
+          type: boolean
+          default: true
+
+    UpdateAutomationRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        config:
+          type: object
+        isActive:
+          type: boolean
+
+    ExecutionLog:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        automationId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, running, completed, failed]
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+        durationMs:
+          type: integer
+        result:
+          type: object
+        errorMessage:
+          type: string
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        pages:
+          type: integer
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

@@ -1,0 +1,103 @@
+{
+  "name": "apods-ai-automation-suite",
+  "version": "1.0.0",
+  "description": "APODS AI-Automation Suite - Comprehensive automation toolkit with AI integration",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.15.0",
+  "workspaces": [
+    "apps/frontend",
+    "apps/backend",
+    "apps/mcp-servers/filesystem",
+    "apps/mcp-servers/playwright",
+    "apps/mcp-servers/memory"
+  ],
+  "scripts": {
+    "dev": "pnpm --parallel -r dev",
+    "dev:frontend": "pnpm --filter frontend dev",
+    "dev:backend": "pnpm --filter backend dev",
+    "dev:mcp": "pnpm --filter '@apods/mcp-*' dev",
+    "build": "pnpm -r build",
+    "build:frontend": "pnpm --filter frontend build",
+    "build:backend": "pnpm --filter backend build",
+    "build:mcp": "pnpm --filter '@apods/mcp-*' build",
+    "build:mcp:filesystem": "pnpm --filter @apods/mcp-filesystem build",
+    "build:mcp:playwright": "pnpm --filter @apods/mcp-playwright build",
+    "build:mcp:memory": "pnpm --filter @apods/mcp-memory build",
+    "start:mcp:filesystem": "pnpm --filter @apods/mcp-filesystem start",
+    "start:mcp:playwright": "pnpm --filter @apods/mcp-playwright start",
+    "start:mcp:memory": "pnpm --filter @apods/mcp-memory start",
+    "test": "pnpm -r test",
+    "test:unit": "pnpm -r test:unit",
+    "test:integration": "pnpm -r test:integration",
+    "test:e2e": "playwright test",
+    "test:coverage": "pnpm -r test:coverage",
+    "test:watch": "pnpm -r test:watch",
+    "lint": "pnpm -r lint && pnpm lint:scripts",
+    "lint:fix": "pnpm -r lint:fix && pnpm lint:scripts --fix",
+    "lint:scripts": "eslint scripts --ext .js,.ts",
+    "format": "prettier --write \"**/*.{js,ts,tsx,json,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{js,ts,tsx,json,md,yml,yaml}\"",
+    "typecheck": "pnpm -r typecheck",
+    "clean": "pnpm -r clean && rm -rf node_modules .turbo",
+    "prepare": "husky install",
+    "security:audit": "pnpm audit --audit-level=moderate",
+    "security:scan": "snyk test",
+    "security:fix": "pnpm audit --fix",
+    "perf:test": "node scripts/performance-test.js",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "ci": "pnpm install --frozen-lockfile && pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "validate": "pnpm lint && pnpm typecheck && pnpm test && pnpm build"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.41.2",
+    "@types/node": "^20.11.16",
+    "@typescript-eslint/eslint-plugin": "^6.20.0",
+    "@typescript-eslint/parser": "^6.20.0",
+    "eslint": "^8.56.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-import": "^2.29.1",
+    "eslint-plugin-jsx-a11y": "^6.8.0",
+    "eslint-plugin-playwright": "^1.2.1",
+    "eslint-plugin-react": "^7.33.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-security": "^2.1.0",
+    "husky": "^9.0.10",
+    "lint-staged": "^15.2.1",
+    "prettier": "^3.2.5",
+    "snyk": "^1.1277.0",
+    "turbo": "^1.12.4",
+    "typescript": "^5.3.3"
+  },
+  "lint-staged": {
+    "*.{js,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
+  },
+  "keywords": [
+    "automation",
+    "ai",
+    "mcp",
+    "playwright",
+    "react",
+    "vite",
+    "typescript",
+    "monorepo"
+  ],
+  "author": "rblake2320",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rblake2320/apods-ai-automation-suite.git"
+  }
+}

@@ -1,0 +1,6 @@
+packages:
+  - 'apps/frontend'
+  - 'apps/backend'
+  - 'apps/mcp-servers/filesystem'
+  - 'apps/mcp-servers/playwright'
+  - 'apps/mcp-servers/memory'

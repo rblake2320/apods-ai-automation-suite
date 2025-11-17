@@ -1,0 +1,240 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  NODE_VERSION: '20.x'
+  PNPM_VERSION: '8.15.0'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # Build and push Docker images
+  build-and-push:
+    name: Build and Push Docker Images
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [frontend, backend]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.app }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha,prefix={{branch}}-
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/${{ matrix.app }}/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VITE_API_URL=${{ secrets.VITE_API_URL }}
+            VITE_WS_URL=${{ secrets.VITE_WS_URL }}
+
+  # Deploy to staging
+  deploy-staging:
+    name: Deploy to Staging
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.event.inputs.environment == 'staging'
+    environment:
+      name: staging
+      url: https://staging.apods.example.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Deploy to ECS (or your platform)
+        run: |
+          echo "Deploying to staging environment..."
+          # Add your deployment commands here
+          # Example for ECS:
+          # aws ecs update-service --cluster staging --service apods --force-new-deployment
+
+      - name: Run database migrations
+        run: |
+          echo "Running database migrations..."
+          # Add migration commands here
+
+      - name: Health check
+        run: |
+          echo "Performing health check..."
+          curl -f https://staging.apods.example.com/health || exit 1
+
+      - name: Notify deployment
+        uses: 8398a7/action-slack@v3
+        if: always()
+        with:
+          status: ${{ job.status }}
+          text: 'Staging deployment ${{ job.status }}'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+
+  # Run smoke tests after staging deployment
+  smoke-tests:
+    name: Smoke Tests
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run smoke tests
+        run: pnpm test:e2e --grep @smoke
+        env:
+          BASE_URL: https://staging.apods.example.com
+
+  # Deploy to production
+  deploy-production:
+    name: Deploy to Production
+    needs: [build-and-push, smoke-tests]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.environment == 'production'
+    environment:
+      name: production
+      url: https://apods.example.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Create database backup
+        run: |
+          echo "Creating database backup..."
+          # Add backup commands here
+
+      - name: Deploy to production
+        run: |
+          echo "Deploying to production environment..."
+          # Add your deployment commands here
+          # Example for Kubernetes:
+          # kubectl set image deployment/apods-frontend frontend=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend:${{ github.sha }}
+          # kubectl set image deployment/apods-backend backend=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend:${{ github.sha }}
+
+      - name: Run database migrations
+        run: |
+          echo "Running database migrations..."
+          # Add migration commands here
+
+      - name: Health check
+        run: |
+          echo "Performing health check..."
+          for i in {1..10}; do
+            if curl -f https://apods.example.com/health; then
+              echo "Health check passed"
+              exit 0
+            fi
+            echo "Waiting for service to be healthy... ($i/10)"
+            sleep 10
+          done
+          echo "Health check failed"
+          exit 1
+
+      - name: Create GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v1
+        with:
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+
+      - name: Notify deployment
+        uses: 8398a7/action-slack@v3
+        if: always()
+        with:
+          status: ${{ job.status }}
+          text: 'Production deployment ${{ job.status }}'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+
+  # Rollback capability
+  rollback:
+    name: Rollback
+    runs-on: ubuntu-latest
+    if: failure()
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Rollback deployment
+        run: |
+          echo "Rolling back deployment..."
+          # Add rollback commands here
+
+      - name: Notify rollback
+        uses: 8398a7/action-slack@v3
+        with:
+          status: 'warning'
+          text: 'Deployment rolled back due to failure'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
